@@ -63,6 +63,14 @@ namespace NLog.Config
     ///<remarks>This class is thread-safe.<c>.ToList()</c> is used for that purpose.</remarks>
     public class XmlLoggingConfiguration : LoggingConfiguration
     {
+#if __ANDROID__
+
+        /// <summary>
+        /// Prefix for assets in Xamarin Android
+        /// </summary>
+        internal const string AssetsPrefix = "assets/";
+#endif
+
         #region private fields
 
         private readonly Dictionary<string, bool> fileMustAutoReloadLookup = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
@@ -134,11 +142,10 @@ namespace NLog.Config
                 fileName = fileName.Trim();
 #if __ANDROID__
                 //suport loading config from special assets folder in nlog.config
-                const string assetsPrefix = "assets/";
-                if (fileName.StartsWith(assetsPrefix, StringComparison.OrdinalIgnoreCase))
+                if (fileName.StartsWith(AssetsPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     //remove prefix
-                    fileName = fileName.Substring(assetsPrefix.Length);
+                    fileName = fileName.Substring(AssetsPrefix.Length);
                     Stream stream = Android.App.Application.Context.Assets.Open(fileName);
                     return XmlReader.Create(stream);
                 }
@@ -515,12 +522,15 @@ namespace NLog.Config
                 this.fileMustAutoReloadLookup[GetFileLookupKey(filePath)] = autoReload;
 
             logFactory.ThrowExceptions = nlogElement.GetOptionalBooleanAttribute("throwExceptions", logFactory.ThrowExceptions);
-            LogManager.ThrowConfigExceptions = nlogElement.GetOptionalBooleanAttribute("throwConfigExceptions", LogManager.ThrowConfigExceptions);
+            logFactory.ThrowConfigExceptions = nlogElement.GetOptionalBooleanAttribute("throwConfigExceptions", logFactory.ThrowConfigExceptions);
             InternalLogger.LogToConsole = nlogElement.GetOptionalBooleanAttribute("internalLogToConsole", InternalLogger.LogToConsole);
             InternalLogger.LogToConsoleError = nlogElement.GetOptionalBooleanAttribute("internalLogToConsoleError", InternalLogger.LogToConsoleError);
             InternalLogger.LogFile = nlogElement.GetOptionalAttribute("internalLogFile", InternalLogger.LogFile);
             InternalLogger.LogLevel = LogLevel.FromString(nlogElement.GetOptionalAttribute("internalLogLevel", InternalLogger.LogLevel.Name));
+#if !SILVERLIGHT && !__IOS__ && !__ANDROID__
             InternalLogger.LogToTrace = nlogElement.GetOptionalBooleanAttribute("internalLogToTrace", InternalLogger.LogToTrace);
+#endif
+            InternalLogger.IncludeTimestamp = nlogElement.GetOptionalBooleanAttribute("internalLogIncludeTimestamp", InternalLogger.IncludeTimestamp);
             logFactory.GlobalThreshold = LogLevel.FromString(nlogElement.GetOptionalAttribute("globalThreshold", logFactory.GlobalThreshold.Name));
 
             var children = nlogElement.Children.ToList();
